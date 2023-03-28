@@ -16,6 +16,7 @@ import _ from "lodash";
 import Row from "./Row";
 import Col from "./Col";
 import { useState } from "react";
+import { IndeterminateCheckbox } from "./IndeterminateCheckbox";
 
 // DataTable  component
 const DataTable = ({
@@ -24,8 +25,7 @@ const DataTable = ({
   columnVisibility = {},
   setColumnVisibility,
 }) => {
-  const [columns, setColumns] = React.useState([...defaultColumns]);
-  const [dragColumnIndex, setDragColumnIndex] = useState(null);
+  const [columns, setColumns] = React.useState([]);
   const [hoverColumnIndex, setHoverColumnIndex] = useState(null);
 
   const [selectedRows, setSelectedRows] = React.useState({});
@@ -45,7 +45,11 @@ const DataTable = ({
 
   /// set default columns
   React.useEffect(() => {
-    setColumns([...defaultColumnsChange]);
+    const lCols = localStorage.getItem("lCols");
+    if (lCols) {
+      setColumns(JSON.parse(lCols));
+    } else setColumns([...defaultColumnsChange]);
+
     setTableData([...defaultTableData]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultColumnsChange, defaultTableData]);
@@ -58,6 +62,9 @@ const DataTable = ({
       rowSelection: selectedRows,
     },
     getRowId,
+    getVisibleFlatColumns: (c) => {
+      console.log(c);
+    },
     getCoreRowModel: getCoreRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     getFilteredRowModel: getFilteredRowModel(),
@@ -70,16 +77,22 @@ const DataTable = ({
 
     setHoverColumnIndex(hoverIndex);
 
-    setColumns((prevState) => {
-      const newItems = [...prevState];
-      newItems.splice(dragIndex, 1);
-      newItems.splice(hoverIndex, 0, dragItem);
-      return newItems;
-    });
+    const newItems = [...columns];
+    newItems.splice(dragIndex, 1);
+    newItems.splice(hoverIndex, 0, dragItem);
+
+    localStorage.setItem("lCols", JSON.stringify(newItems));
+    setColumns(newItems);
   };
 
   const onDrop = () => {
     setHoverColumnIndex(null);
+  };
+
+  // reset cols
+  const resetCols = () => {
+    localStorage.removeItem("lCols");
+    window.location.reload(true);
   };
 
   if (!table) return null;
@@ -111,6 +124,15 @@ const DataTable = ({
             </div>
           )}
 
+          <button
+            type="button"
+            onClick={resetCols}
+            className="font-medium flex items-center text-sm px-5 gap-2 py-2 rounded-md border border-dashed"
+          >
+            <i className="bi bi-sliders2 sm:text-xs -mb-1 " />
+            <span className="hidden md:flex">Reset Column</span>
+          </button>
+
           {/* filter button */}
           <Dropdown placement="bottom-end">
             <Dropdown.Toggle className="flex items-center space-x-2">
@@ -124,6 +146,21 @@ const DataTable = ({
             </Dropdown.Toggle>
             <Dropdown.Menu>
               <div className="p-4 bg-white shadow-lg rounded-md">
+                <div className="px-1">
+                  <label
+                    className="flex items-center gap-2"
+                    onMouseDown={() => localStorage.removeItem("filter_cols")}
+                  >
+                    <input
+                      {...{
+                        type: "checkbox",
+                        checked: table.getIsAllColumnsVisible(),
+                        onChange: table.getToggleAllColumnsVisibilityHandler(),
+                      }}
+                    />
+                    Select All
+                  </label>
+                </div>
                 {table?.getAllLeafColumns()?.map((column) => {
                   return (
                     <div key={column.id} className="px-1">
