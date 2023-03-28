@@ -10,10 +10,12 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   useReactTable,
+  useColumnOrder,
 } from "@tanstack/react-table";
 import _ from "lodash";
 import Row from "./Row";
 import Col from "./Col";
+import { useState } from "react";
 
 // DataTable  component
 const DataTable = ({
@@ -23,6 +25,8 @@ const DataTable = ({
   setColumnVisibility,
 }) => {
   const [columns, setColumns] = React.useState([...defaultColumns]);
+  const [dragColumnIndex, setDragColumnIndex] = useState(null);
+  const [hoverColumnIndex, setHoverColumnIndex] = useState(null);
 
   const [selectedRows, setSelectedRows] = React.useState({});
   const [tableData, setTableData] = React.useState([...data]);
@@ -61,21 +65,21 @@ const DataTable = ({
     onRowSelectionChange: setSelectedRows,
   });
 
-  // move row
-  const moveRow = (dragIndex, hoverIndex) => {
-    const dragRecord = tableData[dragIndex];
-    setTableData(
-      update(tableData, {
-        $splice: [
-          [dragIndex, 1],
-          [hoverIndex, 0, dragRecord],
-        ],
-      })
-    );
+  const moveCol = (dragIndex, hoverIndex) => {
+    const dragItem = columns[dragIndex];
+
+    setHoverColumnIndex(hoverIndex);
+
+    setColumns((prevState) => {
+      const newItems = [...prevState];
+      newItems.splice(dragIndex, 1);
+      newItems.splice(hoverIndex, 0, dragItem);
+      return newItems;
+    });
   };
 
-  const moveCol = (dragIndex, hoverIndex) => {
-    console.log({ dragIndex, hoverIndex });
+  const onDrop = () => {
+    setHoverColumnIndex(null);
   };
 
   if (!table) return null;
@@ -114,7 +118,7 @@ const DataTable = ({
                 type="button"
                 className="font-medium flex items-center text-sm px-5 gap-2 py-2 rounded-md border border-dashed"
               >
-                <i className="fi fi-rr-settings-sliders sm:text-xs -mb-1 " />
+                <i className="bi bi-sliders2 sm:text-xs -mb-1 " />
                 <span className="hidden md:flex">Filter</span>
               </button>
             </Dropdown.Toggle>
@@ -194,6 +198,14 @@ const DataTable = ({
           <div className="w-full h-full overflow-x-auto">
             <DndProvider backend={HTML5Backend}>
               <table className="table-auto">
+                <colgroup>
+                  {columns.map((c, i) => (
+                    <col
+                      key={i}
+                      className={`${i === hoverColumnIndex ? "bg-red-50" : ""}`}
+                    />
+                  ))}
+                </colgroup>
                 <thead>
                   {table?.getHeaderGroups()?.map((headerGroup, index) => (
                     <Col
@@ -201,7 +213,7 @@ const DataTable = ({
                       headerGroup={headerGroup}
                       flexRender={flexRender}
                       moveCol={moveCol}
-                      index={index}
+                      onDrop={onDrop}
                     />
                   ))}
                 </thead>

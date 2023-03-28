@@ -5,29 +5,29 @@ const columnHelper = createColumnHelper();
 
 export const Columns = [
   // select all
-  {
-    id: "select",
-    header: ({ table }) => (
-      <IndeterminateCheckbox
-        {...{
-          checked: table.getIsAllRowsSelected(),
-          indeterminate: table.getIsSomeRowsSelected(),
-          onChange: table.getToggleAllRowsSelectedHandler(),
-        }}
-      />
-    ),
-    cell: ({ row }) => (
-      <div className="px-1">
-        <IndeterminateCheckbox
-          {...{
-            checked: row.getIsSelected(),
-            indeterminate: row.getIsSomeSelected(),
-            onChange: row.getToggleSelectedHandler(),
-          }}
-        />
-      </div>
-    ),
-  },
+  // {
+  //   id: "select",
+  //   header: ({ table }) => (
+  //     <IndeterminateCheckbox
+  //       {...{
+  //         checked: table.getIsAllRowsSelected(),
+  //         indeterminate: table.getIsSomeRowsSelected(),
+  //         onChange: table.getToggleAllRowsSelectedHandler(),
+  //       }}
+  //     />
+  //   ),
+  //   cell: ({ row }) => (
+  //     <div className="px-1">
+  //       <IndeterminateCheckbox
+  //         {...{
+  //           checked: row.getIsSelected(),
+  //           indeterminate: row.getIsSomeSelected(),
+  //           onChange: row.getToggleSelectedHandler(),
+  //         }}
+  //       />
+  //     </div>
+  //   ),
+  // },
 
   // id
   columnHelper.accessor("id", {

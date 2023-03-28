@@ -1,16 +1,22 @@
 import React from "react";
+import { useState } from "react";
+import { useRef } from "react";
 import { useDrag, useDrop } from "react-dnd";
 
 const DND_ITEM_TYPE = "Columns";
 
-const Col = ({ headerGroup, index, flexRender, moveCol }) => {
-  const dropRef = React.useRef(null);
-  const dragRef = React.useRef(null);
+const ColItem = ({ header, flexRender, index, moveCol, onDrop }) => {
+  const dragRef = useRef(null);
+  const dropRef = useRef(null);
+  const [show, setShow] = useState(false);
 
   const [, drop] = useDrop({
     accept: DND_ITEM_TYPE,
+    drop: () => {
+      onDrop();
+    },
     hover(item, monitor) {
-      if (!dropRef.current) {
+      if (!dragRef.current) {
         return;
       }
       const dragIndex = item.index;
@@ -18,23 +24,18 @@ const Col = ({ headerGroup, index, flexRender, moveCol }) => {
       if (dragIndex === hoverIndex) {
         return;
       }
-      const hoverBoundingRect = dropRef.current.getBoundingClientRect();
-
-      const hoverMiddleY =
-        (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-
+      const hoverBoundingRect = dragRef.current.getBoundingClientRect();
+      const hoverMiddleX =
+        (hoverBoundingRect.right - hoverBoundingRect.left) / 2;
       const clientOffset = monitor.getClientOffset();
-      const hoverClientY = clientOffset.y - hoverBoundingRect.top;
-
-      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
+      const hoverClientX = clientOffset.x - hoverBoundingRect.left;
+      if (dragIndex < hoverIndex && hoverClientX < hoverMiddleX) {
         return;
       }
-      // Dragging upwards
-      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
+      if (dragIndex > hoverIndex && hoverClientX > hoverMiddleX) {
         return;
       }
       moveCol(dragIndex, hoverIndex);
-
       item.index = hoverIndex;
     },
   });
@@ -48,21 +49,41 @@ const Col = ({ headerGroup, index, flexRender, moveCol }) => {
   });
 
   const opacity = isDragging ? 0 : 1;
-
   drag(drop(dragRef));
-
   return (
-    <tr ref={dropRef} key={headerGroup.id}>
-      {headerGroup?.headers?.map((header) => (
-        <th
-          ref={dragRef}
+    <th
+      key={header.id}
+      className="relative bg-slate-200 py-2 px-4 text-left"
+      style={{ opacity: opacity }}
+    >
+      <div
+        ref={dragRef}
+        className="absolute top-0 left-0 w-full h-full z-1"
+      ></div>
+      {header.isPlaceholder
+        ? null
+        : flexRender(header.column.columnDef.header, header.getContext())}
+    </th>
+  );
+};
+
+const Col = ({ headerGroup, flexRender, moveCol, onDrop }) => {
+  const [, drop] = useDrop({
+    accept: DND_ITEM_TYPE,
+  });
+
+  let cols = (v) => [...new Set(v)];
+  return (
+    <tr ref={drop} key={headerGroup.id}>
+      {cols(headerGroup?.headers)?.map((header, index) => (
+        <ColItem
           key={header.id}
-          className="bg-slate-200 py-2 px-4 text-left select-none"
-        >
-          {header.isPlaceholder
-            ? null
-            : flexRender(header.column.columnDef.header, header.getContext())}
-        </th>
+          header={header}
+          index={index}
+          moveCol={moveCol}
+          onDrop={onDrop}
+          flexRender={flexRender}
+        />
       ))}
     </tr>
   );
