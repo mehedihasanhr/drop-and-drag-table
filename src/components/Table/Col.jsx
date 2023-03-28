@@ -1,92 +1,66 @@
-import React from "react";
-import { useState } from "react";
-import { useRef } from "react";
+import { flexRender } from "@tanstack/react-table";
 import { useDrag, useDrop } from "react-dnd";
 
-const DND_ITEM_TYPE = "Columns";
+const DraggableColumnHeader = ({ header, table }) => {
+  const { getState, setColumnOrder } = table;
+  const { columnOrder } = getState();
+  const { column } = header;
 
-const ColItem = ({ header, flexRender, index, moveCol, onDrop }) => {
-  const dragRef = useRef(null);
-  const dropRef = useRef(null);
-  const [show, setShow] = useState(false);
+  const reorderColumn = (draggedColumnId, targetColumnId, columnOrder) => {
+    console.log(columnOrder);
+    columnOrder.splice(
+      columnOrder.indexOf(targetColumnId),
+      0,
+      columnOrder.splice(columnOrder.indexOf(draggedColumnId), 1)[0]
+    );
 
-  const [, drop] = useDrop({
-    accept: DND_ITEM_TYPE,
-    drop: () => {
-      onDrop();
-    },
-    hover(item, monitor) {
-      if (!dragRef.current) {
-        return;
-      }
-      const dragIndex = item.index;
-      const hoverIndex = index;
-      if (dragIndex === hoverIndex) {
-        return;
-      }
-      const hoverBoundingRect = dragRef.current.getBoundingClientRect();
-      const hoverMiddleX =
-        (hoverBoundingRect.right - hoverBoundingRect.left) / 2;
-      const clientOffset = monitor.getClientOffset();
-      const hoverClientX = clientOffset.x - hoverBoundingRect.left;
-      if (dragIndex < hoverIndex && hoverClientX < hoverMiddleX) {
-        return;
-      }
-      if (dragIndex > hoverIndex && hoverClientX > hoverMiddleX) {
-        return;
-      }
-      moveCol(dragIndex, hoverIndex);
-      item.index = hoverIndex;
+    return [...columnOrder];
+  };
+
+  const [, dropRef] = useDrop({
+    accept: "column",
+    drop: (draggedColumn) => {
+      const newColumnOrder = reorderColumn(
+        draggedColumn.id,
+        column.id,
+        columnOrder
+      );
+
+      localStorage.setItem("columeOrder", JSON.stringify(newColumnOrder));
+      setColumnOrder(newColumnOrder);
     },
   });
 
-  const [{ isDragging }, drag] = useDrag({
-    item: { type: DND_ITEM_TYPE, index },
-    type: DND_ITEM_TYPE,
+  const [{ isDragging }, dragRef, previewRef] = useDrag({
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
+    item: () => column,
+    type: "column",
   });
 
-  const opacity = isDragging ? 0 : 1;
-  drag(drop(dragRef));
   return (
     <th
-      key={header.id}
+      ref={dropRef}
+      colSpan={header.colSpan}
       className="relative bg-slate-200 py-2 px-4 text-left"
-      style={{ opacity: opacity }}
+      style={{
+        opacity: isDragging ? 0 : 1,
+      }}
     >
-      <div
-        ref={dragRef}
-        className="absolute top-0 left-0 w-full h-full z-1"
-      ></div>
-      {header.isPlaceholder
-        ? null
-        : flexRender(header.column.columnDef.header, header.getContext())}
+      <div ref={previewRef}>
+        {header.isPlaceholder
+          ? null
+          : flexRender(header.column.columnDef.header, header.getContext())}
+        <button
+          ref={dragRef}
+          className="absolute top-0 left-0 w-full h-full opacity-0 z-10"
+        >
+          🟰
+        </button>
+      </div>
     </th>
   );
 };
 
-const Col = ({ headerGroup, flexRender, moveCol, onDrop }) => {
-  const [, drop] = useDrop({
-    accept: DND_ITEM_TYPE,
-  });
-
-  let cols = (v) => [...new Set(v)];
-  return (
-    <tr ref={drop} key={headerGroup.id}>
-      {cols(headerGroup?.headers)?.map((header, index) => (
-        <ColItem
-          key={header.id}
-          header={header}
-          index={index}
-          moveCol={moveCol}
-          onDrop={onDrop}
-          flexRender={flexRender}
-        />
-      ))}
-    </tr>
-  );
-};
-
-export default Col;
+export default DraggableColumnHeader;

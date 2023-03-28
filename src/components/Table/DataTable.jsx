@@ -10,13 +10,13 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   useReactTable,
-  useColumnOrder,
 } from "@tanstack/react-table";
 import _ from "lodash";
 import Row from "./Row";
 import Col from "./Col";
 import { useState } from "react";
 import { IndeterminateCheckbox } from "./IndeterminateCheckbox";
+import DraggableColumnHeader from "./Col";
 
 // DataTable  component
 const DataTable = ({
@@ -25,8 +25,11 @@ const DataTable = ({
   columnVisibility = {},
   setColumnVisibility,
 }) => {
-  const [columns, setColumns] = React.useState([]);
+  const [columns, setColumns] = React.useState([...defaultColumns]);
   const [hoverColumnIndex, setHoverColumnIndex] = useState(null);
+  const [columnOrder, setColumnOrder] = React.useState(
+    columns.map((column) => column.id)
+  );
 
   const [selectedRows, setSelectedRows] = React.useState({});
   const [tableData, setTableData] = React.useState([...data]);
@@ -43,28 +46,33 @@ const DataTable = ({
     return r.id;
   }, []);
 
+  // get columns order from localstore
+  React.useEffect(() => {
+    const co = localStorage.getItem("columeOrder");
+    if (co) {
+      setColumnOrder(JSON.parse(co));
+    }
+  }, []);
+
   /// set default columns
   React.useEffect(() => {
-    const lCols = localStorage.getItem("lCols");
-    if (lCols) {
-      setColumns(JSON.parse(lCols));
-    } else setColumns([...defaultColumnsChange]);
-
+    setColumns([...defaultColumnsChange]);
     setTableData([...defaultTableData]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultColumnsChange, defaultTableData]);
 
+  // table instance
   const table = useReactTable({
     data: tableData,
     columns: columns,
     state: {
+      columnOrder,
       columnVisibility,
       rowSelection: selectedRows,
     },
     getRowId,
-    getVisibleFlatColumns: (c) => {
-      console.log(c);
-    },
+
+    onColumnOrderChange: setColumnOrder,
     getCoreRowModel: getCoreRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     getFilteredRowModel: getFilteredRowModel(),
@@ -72,27 +80,10 @@ const DataTable = ({
     onRowSelectionChange: setSelectedRows,
   });
 
-  const moveCol = (dragIndex, hoverIndex) => {
-    const dragItem = columns[dragIndex];
-
-    setHoverColumnIndex(hoverIndex);
-
-    const newItems = [...columns];
-    newItems.splice(dragIndex, 1);
-    newItems.splice(hoverIndex, 0, dragItem);
-
-    localStorage.setItem("lCols", JSON.stringify(newItems));
-    setColumns(newItems);
-  };
-
-  const onDrop = () => {
-    setHoverColumnIndex(null);
-  };
-
-  // reset cols
-  const resetCols = () => {
-    localStorage.removeItem("lCols");
-    window.location.reload(true);
+  //
+  const resetOrder = () => {
+    setColumnOrder(columns.map((column) => column.id));
+    localStorage.removeItem("columeOrder");
   };
 
   if (!table) return null;
@@ -126,7 +117,7 @@ const DataTable = ({
 
           <button
             type="button"
-            onClick={resetCols}
+            onClick={resetOrder}
             className="font-medium flex items-center text-sm px-5 gap-2 py-2 rounded-md border border-dashed"
           >
             <i className="bi bi-sliders2 sm:text-xs -mb-1 " />
@@ -180,52 +171,6 @@ const DataTable = ({
               </div>
             </Dropdown.Menu>
           </Dropdown>
-
-          {/* export button */}
-          {/* <Dropdown placement="bottom-end">
-            <Dropdown.Toggle className="flex items-center space-x-2">
-              <button
-                type="button"
-                className="font-medium flex items-center text-sm gap-2 px-5 py-2 rounded-md border border-dashed"
-              >
-                <i className="fi fi-rr-print -mb-1" />
-                <span className="hidden md:flex">Export</span>
-              </button>
-            </Dropdown.Toggle>
-            <Dropdown.Menu>
-              <div className="p-4 bg-white shadow-lg rounded-md">
-                <div>
-                  <Link
-                    href="#"
-                    className="block p-2 hover:bg-slate-100 rounded-md"
-                  >
-                    Microsoft Word (.docx)
-                  </Link>
-
-                  <Link
-                    href="#"
-                    className="block p-2 hover:bg-slate-100 rounded-md"
-                  >
-                    Microsoft Excel (.xlsx)
-                  </Link>
-
-                  <Link
-                    href="#"
-                    className="block p-2 hover:bg-slate-100 rounded-md"
-                  >
-                    PDF document (.pdf)
-                  </Link>
-
-                  <Link
-                    href="#"
-                    className="block p-2 hover:bg-slate-100 rounded-md"
-                  >
-                    Print
-                  </Link>
-                </div>
-              </div>
-            </Dropdown.Menu>
-          </Dropdown> */}
         </div>
       </div>
 
@@ -245,13 +190,15 @@ const DataTable = ({
                 </colgroup>
                 <thead>
                   {table?.getHeaderGroups()?.map((headerGroup, index) => (
-                    <Col
-                      key={index}
-                      headerGroup={headerGroup}
-                      flexRender={flexRender}
-                      moveCol={moveCol}
-                      onDrop={onDrop}
-                    />
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <DraggableColumnHeader
+                          key={header.id}
+                          header={header}
+                          table={table}
+                        />
+                      ))}
+                    </tr>
                   ))}
                 </thead>
 
