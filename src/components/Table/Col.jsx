@@ -7,7 +7,6 @@ const DraggableColumnHeader = ({ header, table }) => {
   const { column } = header;
 
   const reorderColumn = (draggedColumnId, targetColumnId, columnOrder) => {
-    console.log(columnOrder);
     columnOrder.splice(
       columnOrder.indexOf(targetColumnId),
       0,
@@ -48,16 +47,16 @@ const DraggableColumnHeader = ({ header, table }) => {
         opacity: isDragging ? 0 : 1,
       }}
     >
-      <div ref={previewRef}>
+      <div ref={previewRef} className="relative">
+        <div
+          ref={dragRef}
+          className="absolute top-0 left-0 w-full h-full opacity-0"
+        >
+          0
+        </div>
         {header.isPlaceholder
           ? null
           : flexRender(header.column.columnDef.header, header.getContext())}
-        <button
-          ref={dragRef}
-          className="absolute top-0 left-0 w-full h-full opacity-0 z-10"
-        >
-          🟰
-        </button>
       </div>
     </th>
   );
